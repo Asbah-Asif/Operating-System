@@ -1,50 +1,34 @@
 #include <stdio.h>
 #include <pthread.h>
-#include <stdlib.h>
-int arr[20]={45, 23, 67, 89, 12, 34, 78, 90, 56, 21, 38, 72,
-
-44, 91, 15, 83, 29, 66, 54, 88};
-struct info{
-    int start;
-int end;
-};
-
-void* findMax(void* arg)
-{
-    struct info *data=(struct info*)arg;
-    int max=arr[data->start];
-    for(int i = data->start + 1; i <= data->end; i++) {
-        if(arr[i] > max)
-            max = arr[i];
-    }
-    printf("thread for elements %d to %d found max = %d\n", data->start, data->end,max );
-
-    int *res=malloc(sizeof(int));
-    *res=max;
-    return res;
+#include <semaphore.h>
+#include <unistd.h>
+sem_t mutex; // Binary semaphore
+int counter = 0;
+void* thread_function(void* arg) {
+int id = *(int*)arg;
+for (int i = 0; i < 5; i++) {
+printf("Thread %d: Waiting...\n", id);
+sem_wait(&mutex); // Acquire
+// Critical section
+counter++;
+printf("Thread %d: In critical section | Counter = %d\n", id,
+counter);
+sleep(1);
+//sem_post(&mutex); // Release
+sleep(1);
 }
-
-int main(){
-    pthread_t t[4];
-    struct info range[4];
-    int part=5;
-
-    for (int i = 0; i < 4; i++)
-    {
-        range[i].start= i*part;
-        range[i].end= range[i].start+part-1;
-        pthread_create(&t[i], NULL, findMax, &range[i]);
-    
-    }
-    int finalMax=arr[0];
-    for (int i=0; i<4;i++)
-    {
-        int *localMax;
-        pthread_join(t[i], (void**)&localMax);
-        if(*localMax>finalMax)
-        finalMax=*localMax;
-        free(localMax);
+return NULL;
 }
-    printf("\nOverall maximum value = %d\n", finalMax);
-    return 0;
+int main() {
+//sem_init(&mutex, 0, 0); // Binary semaphore initialized to 1
+sem_init(&mutex, 0, 1); // Binary semaphore initialized to 1
+pthread_t t1, t2;
+int id1 = 1, id2 = 2;
+pthread_create(&t1, NULL, thread_function, &id1);
+pthread_create(&t2, NULL, thread_function, &id2);
+pthread_join(t1, NULL);
+pthread_join(t2, NULL);
+printf("Final Counter Value: %d\n", counter);
+sem_destroy(&mutex);
+return 0;
 }
